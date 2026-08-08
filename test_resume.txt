@@ -1,0 +1,17 @@
+﻿John Doe
+john@example.com | github.com/johndoe | linkedin.com/in/johndoe
+
+SUMMARY
+Python developer with 3 years experience building REST APIs and data pipelines.
+
+EXPERIENCE
+Software Engineer at TechCorp (2022-2024)
+- Built REST APIs using FastAPI serving 50k daily requests
+- Reduced latency by 40% via Redis caching and query optimization
+- Automated CI/CD pipelines using GitHub Actions and Docker
+
+SKILLS
+Python, FastAPI, SQL, PostgreSQL, Docker, Git, REST APIs, Data Structures, Algorithms
+
+EDUCATION
+B.Tech Computer Science, 2022
