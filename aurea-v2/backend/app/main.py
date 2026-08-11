@@ -9,6 +9,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.config import settings
 from app.core.database import Base, engine
+import app.models  # Ensure every model, including pgvector tables, is registered before create_all.
 from app.routers import auth, resume, interview, quiz, coding, progress, chat, library, admin
 
 # ── Structured logging ────────────────────────────────────────────────────────
@@ -25,6 +26,12 @@ log = structlog.get_logger()
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"])
 
 # ── Database tables ───────────────────────────────────────────────────────────
+if not settings.is_sqlite:
+    # The pgvector Docker image includes this extension. Managed PostgreSQL users
+    # should enable the `vector` extension once in their database dashboard.
+    from sqlalchemy import text
+    with engine.begin() as connection:
+        connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 Base.metadata.create_all(bind=engine)
 log.info("database_ready", url=settings.DATABASE_URL.split("@")[-1] if "@" in settings.DATABASE_URL else "sqlite")
 

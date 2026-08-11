@@ -1,76 +1,104 @@
-"""Job Description ↔ Resume matcher using TF-IDF cosine similarity."""
+"""Explainable, skill-first resume ↔ job-description matching.
+
+This deliberately avoids scoring random word overlap. It maps both documents
+to a shared technical-skill taxonomy, then reports evidence and genuine gaps.
+"""
 from __future__ import annotations
+
 import re
-from collections import Counter
-import math
+
+from app.services.resume_parser import detect_skills
 
 
 STOP_WORDS = {
-    "a","an","the","and","or","but","in","on","at","to","for","of","with",
-    "is","are","was","were","be","been","have","has","had","do","does","did",
-    "will","would","could","should","may","might","shall","can","need","must",
-    "we","our","you","your","they","their","it","its","this","that","these",
-    "those","i","my","me","him","her","his","hers","us","them","who","which",
-    "what","when","where","how","why","not","no","nor","so","yet","both",
-    "either","neither","each","every","all","any","few","more","most","other",
-    "such","than","too","very","just","about","above","after","before","between",
+    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
+    "is", "are", "was", "were", "be", "been", "have", "has", "had", "will", "would", "could",
+    "should", "may", "might", "can", "must", "we", "our", "you", "your", "they", "their",
+    "this", "that", "these", "those", "from", "into", "about", "through", "across", "within",
+    "job", "jobs", "role", "roles", "position", "positions", "candidate", "candidates", "company",
+    "team", "teams", "work", "working", "opportunity", "responsibilities", "responsibility",
+    "requirements", "requirement", "qualified", "qualification", "experience", "years", "year",
+    "including", "ability", "skills", "skill", "knowledge", "looking", "seeking", "preferred",
 }
 
 
-def _tokenize(text: str) -> list[str]:
-    tokens = re.findall(r"\b[a-zA-Z][a-zA-Z0-9+#.]*\b", text.lower())
-    return [t for t in tokens if t not in STOP_WORDS and len(t) > 1]
+def _meaningful_terms(text: str) -> list[str]:
+    words = re.findall(r"\b[a-zA-Z][a-zA-Z0-9+#.]*\b", text.lower())
+    return [word for word in words if word not in STOP_WORDS and len(word) > 2]
 
 
-def _tfidf_vector(tokens: list[str], idf: dict[str, float]) -> dict[str, float]:
-    tf = Counter(tokens)
-    total = len(tokens) or 1
-    return {w: (count / total) * idf.get(w, 1.0) for w, count in tf.items()}
+def _lexical_evidence(resume_text: str, jd_text: str) -> float:
+    """A small secondary signal; never the primary score."""
+    resume_terms, jd_terms = set(_meaningful_terms(resume_text)), set(_meaningful_terms(jd_text))
+    if not jd_terms:
+        return 0.0
+    return len(resume_terms & jd_terms) / len(jd_terms)
 
 
-def _cosine(v1: dict, v2: dict) -> float:
-    keys = set(v1) & set(v2)
-    dot = sum(v1[k] * v2[k] for k in keys)
-    mag1 = math.sqrt(sum(x * x for x in v1.values())) or 1
-    mag2 = math.sqrt(sum(x * x for x in v2.values())) or 1
-    return dot / (mag1 * mag2)
+def _role_hint(jd_text: str) -> str:
+    text = jd_text.lower()
+    for label, phrases in (
+        ("Machine Learning", ("machine learning", "ml engineer", "data scientist")),
+        ("Data", ("data analyst", "data engineer", "analytics")),
+        ("Backend", ("backend", "back-end", "api developer")),
+        ("Frontend", ("frontend", "front-end", "ui developer")),
+        ("Software Engineering", ("software engineer", "full stack", "fullstack")),
+    ):
+        if any(phrase in text for phrase in phrases):
+            return label
+    return "this role"
 
 
 def match_jd(resume_text: str, jd_text: str) -> dict:
-    resume_tokens = _tokenize(resume_text)
-    jd_tokens = _tokenize(jd_text)
+    """Return a stable ATS-style score with skills the user can act on."""
+    resume_skills = set(detect_skills(resume_text))
+    required_skills = set(detect_skills(jd_text))
+    matched = sorted(resume_skills & required_skills)
+    missing = sorted(required_skills - resume_skills)
+    coverage = len(matched) / len(required_skills) if required_skills else 0.0
+    lexical = _lexical_evidence(resume_text, jd_text)
 
-    # Build simple IDF from both documents
-    all_docs = [set(resume_tokens), set(jd_tokens)]
-    df = Counter(w for doc in all_docs for w in doc)
-    n = len(all_docs)
-    idf = {w: math.log((n + 1) / (df[w] + 1)) + 1 for w in df}
+    if not required_skills:
+        return {
+            "match_score": 0,
+            "matched_keywords": [],
+            "missing_keywords": [],
+            "skill_coverage": 0,
+            "matched_skill_count": 0,
+            "required_skill_count": 0,
+            "analysis_summary": "No recognised technical requirements were found. Paste the complete JD, including tools, responsibilities, and qualifications, for a reliable comparison.",
+            "suggestions": [
+                "Add the complete responsibilities and required-skills sections from the job description.",
+                "A job title alone is not enough to generate an ATS-style match score.",
+            ],
+        }
 
-    rv = _tfidf_vector(resume_tokens, idf)
-    jv = _tfidf_vector(jd_tokens, idf)
-
-    similarity = _cosine(rv, jv)
-    match_score = min(100, round(similarity * 160))  # scale to 0-100
-
-    resume_words = set(resume_tokens)
-    jd_words = set(jd_tokens)
-
-    matched = sorted(resume_words & jd_words, key=lambda w: jv.get(w, 0), reverse=True)[:20]
-    missing = sorted(jd_words - resume_words, key=lambda w: jv.get(w, 0), reverse=True)[:15]
+    # Skill coverage drives 85% of the outcome; wording overlap only checks that
+    # the resume includes relevant evidence beyond a list of tools.
+    match_score = round(min(100, 12 + coverage * 78 + min(lexical, 0.5) * 20))
+    role = _role_hint(jd_text)
+    summary = (
+        f"Your resume demonstrates {len(matched)} of {len(required_skills)} recognised skills requested for {role}. "
+        f"The strongest evidence is {', '.join(matched[:4]) or 'not yet explicit'}."
+    )
 
     suggestions = []
     if missing:
-        suggestions.append(f"Add these keywords from the JD: {', '.join(missing[:8])}.")
-    if match_score < 50:
-        suggestions.append("Your resume content has low overlap with this JD. Tailor your skills and project descriptions.")
-    elif match_score < 70:
-        suggestions.append("Good overlap. Strengthen the experience section with role-specific terminology.")
+        suggestions.append(f"Only add {', '.join(missing[:5])} if you can support it with real coursework, project, or internship evidence.")
+    if coverage < 0.5:
+        suggestions.append("Tailor the project bullets near the top of your resume to show the most relevant tools, problem, action, and measurable result.")
+    elif coverage < 0.8:
+        suggestions.append("Good skill coverage. Strengthen the matched skills with outcomes, scale, and ownership in your experience or projects.")
     else:
-        suggestions.append("Strong match. Ensure your top bullets mirror the JD's priority skills.")
+        suggestions.append("Strong skill coverage. Mirror the JD's most important terminology in your summary and top project bullets—only where truthful.")
 
     return {
         "match_score": match_score,
         "matched_keywords": matched,
         "missing_keywords": missing,
+        "skill_coverage": round(coverage * 100),
+        "matched_skill_count": len(matched),
+        "required_skill_count": len(required_skills),
+        "analysis_summary": summary,
         "suggestions": suggestions,
     }

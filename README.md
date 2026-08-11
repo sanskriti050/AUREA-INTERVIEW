@@ -20,22 +20,26 @@ A full-stack platform for structured interview preparation: resume analysis, moc
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS |
 | Backend | FastAPI, SQLAlchemy, Pydantic |
 | Local database | SQLite |
-| Production database | PostgreSQL (Docker configuration included) |
+| Production database | PostgreSQL + pgvector (Docker configuration included) |
 | AI | Groq API |
 | Code execution | Judge0 via RapidAPI, with local Python fallback |
 | Auth | JWT access and refresh tokens |
 | Deployment files | Docker, Docker Compose, Nginx |
+| CI | GitHub Actions: backend tests, TypeScript, lint, production build |
 
 ## Project structure
-
-> Important: the actual backend is inside the nested `aurea-v2\backend` folder. Do **not** use the separate root-level `backend` folder.
 
 ```text
 aurea-v2/                         # project root
 ├── aurea-v2/
-│   └── backend/                   # FastAPI backend — use this folder
+│   └── backend/                   # FastAPI backend
 │       ├── app/
+│       ├── alembic/               # database migrations
+│       │   ├── env.py
+│       │   ├── script.py.mako
+│       │   └── versions/          # one file per migration
 │       ├── tests/
+│       ├── alembic.ini
 │       ├── requirements.txt
 │       └── .env                   # create this locally; never commit it
 ├── frontend/                      # Next.js frontend
@@ -106,6 +110,12 @@ FRONTEND_URL=http://localhost:3000
 
 # Required for chat, resume semantic analysis, interview feedback, and AI code review
 GROQ_API_KEY=gsk_your_key_here
+
+# Optional but recommended: enables embedding-based semantic resume ↔ JD matching.
+# This is a separate OpenAI-compatible embedding-provider key, not a Groq chat key.
+EMBEDDING_API_KEY=your_embedding_provider_key_here
+EMBEDDING_BASE_URL=https://api.openai.com/v1
+EMBEDDING_MODEL=text-embedding-3-small
 
 # Optional: enables Java, JavaScript, C++ and other Judge0-supported executions
 JUDGE0_API_KEY=your_rapidapi_key_here
@@ -181,6 +191,34 @@ npm run lint
 npm run build
 ```
 
+## Database migrations (Alembic)
+
+Alembic manages schema changes for both SQLite (local) and PostgreSQL (production).
+Always run these from the backend folder with the virtual environment active.
+
+```powershell
+Set-Location -LiteralPath "C:\Users\sanskriti\OneDrive\Desktop\aurea-v2\aurea-v2\backend"
+.\.venv\Scripts\Activate.ps1
+
+# Apply all pending migrations
+python -m alembic upgrade head
+
+# Show current revision
+python -m alembic current
+
+# Show full history
+python -m alembic history --verbose
+
+# Roll back the last migration
+python -m alembic downgrade -1
+
+# Auto-generate a migration after changing a model
+python -m alembic revision --autogenerate -m "describe your change"
+```
+
+The initial migration (`001_initial`) creates every table including `vector(1536)` on
+PostgreSQL or JSON on SQLite. The `vector` extension is enabled automatically.
+
 ## Main routes
 
 | Page | Route |
@@ -220,6 +258,23 @@ docker compose up --build -d
 ```
 
 Before production, set strong non-default secrets, use PostgreSQL, set the production frontend URL, and configure real Groq/Judge0 keys. SQLite is suitable for local development only; it is not intended for concurrent production traffic.
+
+### PostgreSQL + pgvector semantic matching
+
+The Docker stack uses `pgvector/pgvector:pg16`. In PostgreSQL mode, Aurea creates a native `VECTOR(1536)` column for resume embeddings and enables the `vector` extension at startup. A managed provider such as Neon or Supabase works too; enable the `vector` extension in its SQL editor before starting the backend.
+
+For true semantic JD matching, set `EMBEDDING_API_KEY` in `aurea-v2/backend/.env` and restart the backend. Existing resumes can then be re-embedded with **Resume → Refresh analysis**. Without this optional key, the JD matcher stays fully usable through the deterministic keyword fallback and clearly labels that result in the UI.
+
+### GitHub Actions CI
+
+The workflow at `.github/workflows/ci.yml` runs automatically on every push and pull request to `main` or `master`:
+
+- FastAPI test suite
+- TypeScript type check
+- ESLint
+- Production Next.js build
+
+To activate it, create a GitHub repository, push this project, and open the **Actions** tab. No secret is required for the current CI checks because they do not call live AI services.
 
 ## Troubleshooting
 
@@ -277,3 +332,8 @@ python -m pip cache purge
 - Generate a unique `SECRET_KEY` for every production environment.
 - Treat AI prompt filtering as a safety layer, not a complete guarantee against prompt injection.
 - Apply rate limits and use PostgreSQL for an actual public deployment.
+
+
+cd "C:\Users\sanskriti\OneDrive\Desktop\aurea-v2"
+>> 
+cmd /c start.bat

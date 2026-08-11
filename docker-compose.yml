@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-aurea}
@@ -13,9 +13,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
 
   backend:
-    build: ./aurea-v2/backend
+    build:
+      context: ./aurea-v2/backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ./aurea-v2/backend/.env
     environment:
@@ -26,15 +29,23 @@ services:
         condition: service_healthy
     expose:
       - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: /api
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     expose:
       - "3000"
 

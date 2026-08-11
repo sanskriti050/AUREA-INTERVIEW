@@ -55,13 +55,13 @@ class TestInterviewEndpoints:
         })
         assert resp.status_code == 400
 
-    def test_evaluate_answer(self, client: TestClient):
+    def test_evaluate_answer(self, client: TestClient, auth_headers: dict):
         resp = client.post("/api/interview/evaluate", json={
             "question": "What is a stack?",
             "answer": "A stack is a LIFO data structure. Push adds elements to the top and pop removes from the top. Used in recursion and undo operations.",
             "topic": "Data Structures",
             "difficulty": "Easy",
-        })
+        }, headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
         assert "score" in data

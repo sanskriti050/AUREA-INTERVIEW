@@ -1,0 +1,23 @@
+Alembic database migrations for Aurea v2.
+
+Run from the backend/ directory with the virtual environment active.
+
+Common commands
+---------------
+
+Apply all pending migrations (local SQLite or production PostgreSQL):
+    python -m alembic upgrade head
+
+Roll back the last migration:
+    python -m alembic downgrade -1
+
+Show current revision:
+    python -m alembic current
+
+Show migration history:
+    python -m alembic history --verbose
+
+Auto-generate a new migration after changing a model:
+    python -m alembic revision --autogenerate -m "describe your change"
+
+Always review auto-generated migrations before applying them.

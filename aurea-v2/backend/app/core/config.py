@@ -16,6 +16,11 @@ class Settings(BaseSettings):
 
     # AI
     GROQ_API_KEY: Optional[str] = None
+    # OpenAI-compatible embeddings endpoint. Keep this separate from GROQ_API_KEY:
+    # chat models and embedding models are different services.
+    EMBEDDING_API_KEY: Optional[str] = None
+    EMBEDDING_BASE_URL: str = "https://api.openai.com/v1"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
 
     # Code execution
     JUDGE0_API_KEY: Optional[str] = None

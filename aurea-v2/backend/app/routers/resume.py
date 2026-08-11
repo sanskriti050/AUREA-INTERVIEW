@@ -8,7 +8,7 @@ from app.schemas.resume import ResumeAnalysisResponse, JDMatchRequest, JDMatchRe
 import os
 
 from app.services.resume_parser import analyze_resume, extract_resume_text, semantic_section_detection
-from app.services.jd_matcher import match_jd
+from app.services.semantic_matcher import semantic_match_jd, store_resume_embedding
 
 router = APIRouter(prefix="/resume", tags=["Resume"])
 
@@ -55,6 +55,7 @@ async def analyze(
 
     db.commit()
     db.refresh(resume)
+    await store_resume_embedding(db, resume.id, raw_text)
 
     return ResumeAnalysisResponse(
         id=resume.id,
@@ -118,11 +119,12 @@ async def reanalyze_saved_resume(
     profile = analyze_resume(resume.raw_text)
     resume.sections = await semantic_section_detection(resume.raw_text, profile["sections"])
     db.commit()
+    await store_resume_embedding(db, resume.id, resume.raw_text)
     return {"sections": resume.sections}
 
 
 @router.post("/match-jd", response_model=JDMatchResponse)
-def match_job_description(
+async def match_job_description(
     payload: JDMatchRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -131,5 +133,5 @@ def match_job_description(
     if not resume:
         raise HTTPException(status_code=404, detail="Upload your resume first.")
 
-    result = match_jd(resume.raw_text, payload.job_description)
+    result = await semantic_match_jd(db, resume.id, resume.raw_text, payload.job_description)
     return JDMatchResponse(**result)
