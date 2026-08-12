@@ -67,7 +67,7 @@ async def semantic_match_jd(db: Session, resume_id: str, resume_text: str, jd_te
     stored = db.query(ResumeEmbedding).filter(ResumeEmbedding.resume_id == resume_id).first()
     jd_vector = await create_embedding(jd_text)
     if stored is None or jd_vector is None or not isinstance(stored.embedding, list):
-        lexical["match_method"] = "keyword fallback"
+        lexical["match_method"] = "keyword analysis (set EMBEDDING_API_KEY for semantic matching)"
         return lexical
 
     semantic_score = round(_cosine_similarity(stored.embedding, jd_vector) * 100)

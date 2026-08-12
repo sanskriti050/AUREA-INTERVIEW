@@ -87,8 +87,8 @@ class TestMe:
 
     def test_get_me_unauthenticated(self, client: TestClient):
         resp = client.get("/api/auth/me")
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     def test_get_me_invalid_token(self, client: TestClient):
         resp = client.get("/api/auth/me", headers={"Authorization": "Bearer invalidtoken"})
-        assert resp.status_code in (401, 403)  # both mean unauthorized
+        assert resp.status_code == 401

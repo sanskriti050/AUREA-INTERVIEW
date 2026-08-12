@@ -1,21 +1,44 @@
-from fastapi import Depends, HTTPException, status
+"""FastAPI dependencies — supports both httpOnly cookie auth and Bearer token auth.
+
+Cookie auth is the secure default (tokens not accessible via JavaScript).
+Bearer token auth is kept as fallback for API clients and the interactive docs.
+"""
+from fastapi import Cookie, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from typing import Optional
+
 from app.core.database import get_db
 from app.core.security import decode_token
 from app.models.user import User
 from app.core.config import settings
 
-bearer_scheme = HTTPBearer()
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    request: Request,
+    # Cookie-based auth (httpOnly — not accessible to JavaScript)
+    access_token_cookie: Optional[str] = Cookie(default=None, alias="access_token"),
+    # Bearer token fallback (for API clients / Swagger docs)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    token = credentials.credentials
-    payload = decode_token(token)
+    # Prefer cookie; fall back to Authorization header
+    token: Optional[str] = None
+    if access_token_cookie:
+        token = access_token_cookie
+    elif credentials:
+        token = credentials.credentials
 
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    payload = decode_token(token)
     if not payload or payload.get("type") != "access":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

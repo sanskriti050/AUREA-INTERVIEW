@@ -12,6 +12,19 @@ from app.core.database import Base, engine
 import app.models  # Ensure every model, including pgvector tables, is registered before create_all.
 from app.routers import auth, resume, interview, quiz, coding, progress, chat, library, admin
 
+# ── Sentry error monitoring (optional — set SENTRY_DSN in .env to enable) ────
+if settings.SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.APP_ENV,
+        integrations=[FastApiIntegration(), SqlalchemyIntegration()],
+        traces_sample_rate=0.2,   # 20% of requests tracked for performance
+        send_default_pii=False,   # never send user PII to Sentry
+    )
+
 # ── Structured logging ────────────────────────────────────────────────────────
 structlog.configure(
     processors=[

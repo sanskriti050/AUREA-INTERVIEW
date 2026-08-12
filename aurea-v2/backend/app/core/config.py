@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     FRONTEND_URL: str = "http://localhost:3000"
 
+    # Monitoring — optional, set to enable Sentry error tracking
+    SENTRY_DSN: Optional[str] = None
+
     @field_validator("SECRET_KEY")
     @classmethod
     def secret_key_strong(cls, v: str) -> str:

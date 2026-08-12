@@ -89,7 +89,7 @@ class TestCodingAPI:
             "language": "Python",
             "code": "def solution(): pass",
         })
-        assert resp.status_code == 403
+        assert resp.status_code == 401
 
     def test_review_authenticated(self, client: TestClient, auth_headers: dict):
         resp = client.post("/api/coding/review", json={

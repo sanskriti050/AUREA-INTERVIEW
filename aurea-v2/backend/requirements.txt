@@ -11,7 +11,8 @@ aiosqlite==0.20.0         # SQLite async (dev fallback)
 pgvector==0.3.6           # Native PostgreSQL vector column support
 
 # ── Auth & Security ───────────────────────────────────────────────────────────
-python-jose[cryptography]==3.3.0
+# PyJWT replaces python-jose (which has CVE-2024-33664 and is unmaintained)
+PyJWT==2.9.0
 passlib[bcrypt]==1.7.4
 # passlib 1.7.4 is incompatible with bcrypt 5.x during backend detection.
 bcrypt==4.2.1
@@ -37,3 +38,4 @@ fpdf2==2.8.1
 
 # ── Monitoring / Logging ──────────────────────────────────────────────────────
 structlog==24.4.0
+sentry-sdk[fastapi]==2.19.2
