@@ -16,6 +16,9 @@ class Settings(BaseSettings):
 
     # AI
     GROQ_API_KEY: Optional[str] = None
+    # Groq retired llama-3.3-70b-versatile for developer-tier accounts in August 2026.
+    # Keep this configurable so deployments can select a model available to their account.
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     # OpenAI-compatible embeddings endpoint. Keep this separate from GROQ_API_KEY:
     # chat models and embedding models are different services.
     EMBEDDING_API_KEY: Optional[str] = None

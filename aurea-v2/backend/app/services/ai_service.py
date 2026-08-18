@@ -4,7 +4,7 @@ from typing import AsyncIterable, Optional, List
 import re
 from app.core.config import settings
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = settings.GROQ_MODEL
 
 # ── Input sanitization ────────────────────────────────────────────────────────
 _INJECTION_PATTERNS = [

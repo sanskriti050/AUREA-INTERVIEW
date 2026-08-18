@@ -60,8 +60,18 @@ def submit_answers(
     if not questions:
         raise HTTPException(status_code=404, detail="No questions found.")
 
-    q_map = {q["id"]: q for q in questions}
     submitted = answers.get("answers", {})
+    requested_ids = answers.get("question_ids", [])
+    if requested_ids:
+        if not isinstance(requested_ids, list) or len(requested_ids) != len(set(requested_ids)):
+            raise HTTPException(status_code=400, detail="question_ids must be a unique list.")
+        q_map = {q["id"]: q for q in questions}
+        unknown_ids = set(requested_ids) - set(q_map)
+        if unknown_ids:
+            raise HTTPException(status_code=400, detail="One or more submitted questions are invalid.")
+        questions = [q_map[qid] for qid in requested_ids]
+    if not questions:
+        raise HTTPException(status_code=400, detail="Submit at least one quiz question.")
     results = []
     correct_count = 0
 

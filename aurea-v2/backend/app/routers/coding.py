@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional
 from app.core.dependencies import get_current_user
@@ -38,14 +38,20 @@ def get_difficulties():
 
 
 @router.get("/problems/{topic}/{difficulty}")
-def get_problems(topic: str, difficulty: str, count: int = 10):
+def get_problems(topic: str, difficulty: str, count: int = Query(default=10, ge=1, le=20)):
     problems = list_problems(topic, difficulty)
     if not problems:
         raise HTTPException(status_code=404, detail="No problems found.")
+    available = len(problems)
     import random
     if count < len(problems):
         problems = random.sample(problems, count)
-    return {"problems": problems}
+    return {
+        "problems": problems,
+        "total": len(problems),
+        "available": available,
+        "requested": count,
+    }
 
 
 @router.get("/starter/{problem_id}/{language}")
