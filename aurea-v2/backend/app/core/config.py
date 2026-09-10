@@ -37,7 +37,15 @@ class Settings(BaseSettings):
 
     # App
     APP_ENV: str = "development"
+    # Comma-separated list of allowed CORS origins, e.g. "https://aurea.vercel.app"
     FRONTEND_URL: str = "http://localhost:3000"
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        origins = [u.strip() for u in self.FRONTEND_URL.split(",") if u.strip()]
+        if "http://localhost:3000" not in origins:
+            origins.append("http://localhost:3000")
+        return origins
 
     # Monitoring — optional, set to enable Sentry error tracking
     SENTRY_DSN: Optional[str] = None
@@ -82,6 +90,9 @@ class Settings(BaseSettings):
             raise ValueError("Set a unique SECRET_KEY for production; do not use the example value.")
         if self.is_sqlite:
             raise ValueError("Production requires PostgreSQL. Set DATABASE_URL to a postgresql:// URL.")
+        # Render emits postgres:// — fix it for SQLAlchemy
+        if self.DATABASE_URL.startswith("postgres://"):
+            self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
         if not self.DATABASE_URL.startswith(("postgresql://", "postgresql+psycopg2://")):
             raise ValueError("Production DATABASE_URL must use PostgreSQL.")
         return self

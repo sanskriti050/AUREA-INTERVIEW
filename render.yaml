@@ -1,0 +1,56 @@
+databases:
+  - name: aurea-db
+    databaseName: aurea
+    user: aurea
+    plan: free
+    region: oregon
+
+services:
+  - type: web
+    name: aurea-backend
+    runtime: docker
+    region: oregon
+    plan: free
+    rootDir: aurea-v2/backend
+    dockerfilePath: ./Dockerfile
+    dockerCommand: sh start.sh
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aurea-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      - key: FRONTEND_URL
+        value: https://your-app.vercel.app
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: EMBEDDING_API_KEY
+        sync: false
+      - key: EMBEDDING_BASE_URL
+        value: https://api.openai.com/v1
+      - key: EMBEDDING_MODEL
+        value: text-embedding-3-small
+      - key: JUDGE0_API_KEY
+        sync: false
+      - key: JUDGE0_BASE_URL
+        value: https://judge0-ce.p.rapidapi.com
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "60"
+      - key: AUTH_RATE_LIMIT_PER_MINUTE
+        value: "10"
+      - key: AI_RATE_LIMIT_PER_MINUTE
+        value: "20"
+      - key: ADMIN_EMAILS
+        sync: false
