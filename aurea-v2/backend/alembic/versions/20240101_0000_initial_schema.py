@@ -1,4 +1,4 @@
-"""Initial schema — all tables
+﻿"""Initial schema — all tables
 
 Revision ID: 001_initial
 Revises:
@@ -114,11 +114,11 @@ def upgrade() -> None:
     op.create_index("ix_resume_embeddings_resume_id", "resume_embeddings", ["resume_id"], unique=True)
 
     # ── interview_sessions ────────────────────────────────────────────────────
-    if is_pg:
-        op.execute("DO $$ BEGIN CREATE TYPE sessiontype AS ENUM ('theory', 'coding', 'quiz', 'mock'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
-        session_type_col = sa.Enum("theory", "coding", "quiz", "mock", name="sessiontype", create_type=False)
-    else:
-        session_type_col = sa.String(20)
+    session_type_col = sa.String(20)
+
+
+
+
 
     op.create_table(
         "interview_sessions",
@@ -141,11 +141,11 @@ def upgrade() -> None:
     )
 
     # ── progress_events ───────────────────────────────────────────────────────
-    if is_pg:
-        op.execute("DO $$ BEGIN CREATE TYPE eventtype AS ENUM ('quiz_answer', 'theory_evaluated', 'code_review', 'mock_completed'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
-        event_type_col = sa.Enum("quiz_answer", "theory_evaluated", "code_review", "mock_completed", name="eventtype", create_type=False)
-    else:
-        event_type_col = sa.String(30)
+    event_type_col = sa.String(30)
+
+
+
+
 
     op.create_table(
         "progress_events",
