@@ -115,8 +115,8 @@ def upgrade() -> None:
 
     # ── interview_sessions ────────────────────────────────────────────────────
     if is_pg:
-        op.execute("CREATE TYPE sessiontype AS ENUM ('theory', 'coding', 'quiz', 'mock')")
-        session_type_col = sa.Enum("theory", "coding", "quiz", "mock", name="sessiontype")
+        op.execute("DO $$ BEGIN CREATE TYPE sessiontype AS ENUM ('theory', 'coding', 'quiz', 'mock'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+        session_type_col = sa.Enum("theory", "coding", "quiz", "mock", name="sessiontype", create_type=False)
     else:
         session_type_col = sa.String(20)
 
@@ -142,8 +142,8 @@ def upgrade() -> None:
 
     # ── progress_events ───────────────────────────────────────────────────────
     if is_pg:
-        op.execute("CREATE TYPE eventtype AS ENUM ('quiz_answer', 'theory_evaluated', 'code_review', 'mock_completed')")
-        event_type_col = sa.Enum("quiz_answer", "theory_evaluated", "code_review", "mock_completed", name="eventtype")
+        op.execute("DO $$ BEGIN CREATE TYPE eventtype AS ENUM ('quiz_answer', 'theory_evaluated', 'code_review', 'mock_completed'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+        event_type_col = sa.Enum("quiz_answer", "theory_evaluated", "code_review", "mock_completed", name="eventtype", create_type=False)
     else:
         event_type_col = sa.String(30)
 
